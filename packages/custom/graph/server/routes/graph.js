@@ -7,6 +7,8 @@
   // The Package is past automatically as first parameter
   module.exports = function (Graph, app, auth, database) {
 
+    app.get('/api/graph/result/id', api.getResult2);
+
     app.get('/api/graph/result', api.getResult);
 
     app.get('/api/graph/example/auth', auth.requiresLogin, function (req, res, next) {

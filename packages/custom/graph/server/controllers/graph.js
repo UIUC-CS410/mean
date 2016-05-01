@@ -247,4 +247,62 @@ module.exports = {
     res.status(200).json(data);
   },
 
+  getResult2: function(req, res) {
+    var mongojs = require('mongojs');
+    var db = mongojs('mean-dev', ['apas', 'find_top_k']);
+
+    mapFunc = function() {
+      if (this.row == orig_author_id || this.column == orig_author_id) {
+        if (orig_author_id == this.column) {
+          f_row = this.column;
+          f_col = orig_author_id;
+
+          Mii = diags[f_row];
+          Mjj = diags[f_col];
+          Mij = this.value;
+
+          emit(this.row, 2 * this.value/(Mii + Mjj));
+        } else {
+          f_row = orig_author_id;
+          f_col = this.column;
+
+          Mii = diags[f_row];
+          Mjj = diags[f_col];
+          Mij = this.value;
+
+          emit(this.column, 2 * this.value/(Mii + Mjj));
+        }
+      }
+    }
+
+    reduceFunc = function(k, v) {
+      return { 'scores' : v };
+    }
+
+    getDiags = function() {
+      var diags = db.apas.find({ $where: "this.row == this.column" }, { value : 1 }).sort({row: 1}).toArray();
+      var res = [];
+
+      for (var i = 0; i < diags.length; i++) {
+        res.push(diags[i].value);
+      }
+
+      return res;
+    }
+
+    var diags = getDiags();
+    db.find_top_k.drop();
+    db.apas.mapReduce(mapFunc,
+        reduceFunc,
+        {
+          "out" : "find_top_k",
+          "query" : {},
+          // get this input from user
+          "scope" : { orig_author_id : 3536 , diags : diags }
+        });
+    var data = db.find_top_k.find({}).sort({value:-1});
+
+    res.status(200).json(data);
+  },
+
 };

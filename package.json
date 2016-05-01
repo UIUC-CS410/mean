@@ -91,6 +91,7 @@
     "karma-requirejs": "latest",
     "karma-script-launcher": "latest",
     "mocha": "latest",
+    "mongojs": "^2.4.0",
     "phantomjs-prebuilt": "latest",
     "protractor": "latest",
     "require-dir": "latest",
