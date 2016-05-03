@@ -18,16 +18,16 @@ var readline = require('readline'),
     stream = require('stream');
 var async = require('async');
 
-var A2P = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/A2P.txt', 'utf8')),
-    P2A = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/P2A.txt', 'utf8')),
-    P2T = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/P2T.txt', 'utf8')),
-    T2P = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/T2P.txt', 'utf8')),
-    P2V = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/P2V.txt', 'utf8')),
-    V2P = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/V2P.txt', 'utf8')),
+var A2P = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/A2P.json', 'utf8')),
+    P2A = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/P2A.json', 'utf8')),
+    P2T = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/P2T.json', 'utf8')),
+    T2P = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/T2P.json', 'utf8')),
+    P2V = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/P2V.json', 'utf8')),
+    V2P = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/V2P.json', 'utf8')),
     aId = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/authorIndex.json', 'utf8')),
-    pId = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/paperIndex.json', 'utf8')),
-    tId = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/termIndex.json', 'utf8')),
-    vId = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/venueIndex.json', 'utf8')),
+    //pId = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/paperIndex.json', 'utf8')),
+    //tId = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/termIndex.json', 'utf8')),
+    //vId = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/venueIndex.json', 'utf8')),
     authors = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/authors.json', 'utf8')),
     papers = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/papers.json', 'utf8')),
     terms = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/terms.json', 'utf8')),
@@ -40,8 +40,6 @@ var A2P = JSON.parse(fs.readFileSync('./packages/custom/graph/server/data/A2P.tx
 var getAuthorName = function (id_, map_, dict_) {
     if (0 <= id_ && id_ < 5000) {
         // 0-4999 id
-        id_ = id_.toString();
-
         if (dict_.hasOwnProperty(map_[id_])) {
             return dict_[map_[id_]];
         }
@@ -57,8 +55,6 @@ var getAuthorName = function (id_, map_, dict_) {
 var findAuthorPapers = function(id_) {
     if (0 <= id_ && id_ < 5000) {
         // 0-4999 id
-        id_ = id_.toString();
-
         if (A2P.hasOwnProperty(aId[id_])) {
             return A2P[aId[id_]].map(Number).sort(function(a, b) {
                 return a - b;
@@ -76,8 +72,6 @@ var findAuthorPapers = function(id_) {
 
 // (5-digit id - > item name)
 var getItemName = function (id_, dict_) {
-    id_ = id_.toString();
-
     if (dict_.hasOwnProperty(id_)) {
         return dict_[id_];
     }
@@ -393,6 +387,30 @@ module.exports = {
                                 } else {
                                     var sims = [], pps = [], edges = [];
 
+                                    var containPaper = function(p, pp) {
+                                        pp.forEach(function(paper) {
+                                            if (paper.hasOwnProperty('id')) {
+                                                if (paper.id === p) {
+                                                    return true;
+                                                }
+                                            }
+                                        });
+                                        return false;
+                                    }
+
+                                    var containEdge = function(e, edges) {
+                                        edges.forEach(function(edge) {
+                                            if (edge.hasOwnProperty('from') &&
+                                                edge.hasOwnProperty('to')) {
+                                                if (e.from === edge.from &&
+                                                    e.to === edge.to) {
+                                                    return true;
+                                                }
+                                            }
+                                        });
+                                        return false;
+                                    }
+
                                     orig = {id: results[0]._id,
                                             label: getAuthorName(results[0]._id, aId, authors),
                                             desc: 'original_author'};
@@ -408,13 +426,22 @@ module.exports = {
                                         commonPapers = intersect_safe(findAuthorPapers(orig.id), findAuthorPapers(coauthor.id));
 
                                         commonPapers.forEach(function(paper) {
-                                            // do a check to make sure no dup
-                                            pps.push({id: paper,
-                                                      label: getItemName(paper, papers)});
-                                            edges.push({from: orig.id,
-                                                        to: paper});
-                                            edges.push({from: coauthor.id,
-                                                        to: paper})
+                                            // do a check to make sure no dup paper node
+                                            if (!containPaper(paper, pps)) {
+                                                pps.push({id: paper,
+                                                          label: getItemName(paper, papers),
+                                                          type: 'paper'});
+                                            }
+                                            // add edge from orig author to paper
+                                            e = {from: orig.id, to: paper};
+                                            if (!containEdge(e, edges)) {
+                                                edges.push(e);
+                                            }
+                                            // add edge from co-author to paper
+                                            e = {from: coauthor.id, to: paper};
+                                            if (!containEdge(e, edges)) {
+                                                edges.push(e);
+                                            }
                                         });
                                     });
 
