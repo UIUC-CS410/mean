@@ -376,7 +376,7 @@ module.exports = {
                         "out": "find_top_k",
                         "query": {},
                         // get this input from user (name -> 5-digit id -> 0-4999 id)
-                        "scope": {orig_author_id: 3536, diags: diagonals}
+                        "scope": {orig_author_id: 770, diags: diagonals}
                     }, function(err, results) {
                         if (err) {
                             console.log('mapReduce failed');
