@@ -8,15 +8,12 @@
       .controller('VisController', VisController)
   .controller('ProjectController', ProjectController);
 
-  GraphController.$inject = ['$scope', 'Global', 'Graph'];
+  GraphController.$inject = ['$scope', 'Global', 'Graph','$http'];
   VisController.$inject = ['$scope','$http'];
   ProjectController.$inject = ['$scope','$http','FileUploader'];
 
-  function GraphController($scope, Global, Graph) {
-    $scope.global = Global;
-    $scope.package = {
-      name: 'graph'
-    };
+  function GraphController($scope, Global, Graph,$http) {
+
   }
 
   function ProjectController($scope, $http, FileUploader) {
@@ -74,14 +71,25 @@
   }
 
   function VisController($scope,$http) {
-    console.log('hi')
-    $http.get('api/graph/result')
-        .success(function (data) {
-          redrawAll(data.data.edges, data.data.nodes)
+    $scope.doSearch=function(){
+      $http({
+        method: 'GET',
+        url: 'api/graph/result/'+$scope.authorName
+      }).then(function successCallback(response) {
+        console.log(response.data)
+        redrawAll(response.data.edges, response.data.nodes)
+      }, function errorCallback(response) {
+        console.log(response.data)
+      });
+    }
 
-        }).error(function(data, status, headers, config) {
-
-        });
+    //$http.get('api/graph/result')
+    //    .success(function (data) {
+    //      redrawAll(data.data.edges, data.data.nodes)
+    //
+    //    }).error(function(data, status, headers, config) {
+    //
+    //    });
 
     function redrawAll(edges,nodes) {
       var network;
@@ -92,34 +100,38 @@
 
       var container = document.getElementById('mynetwork');
       var options = {
+        autoResize: true,
+        height: '100%',
+        width: '100%',
         nodes: {
           shape: 'dot',
-          scaling: {
-            min: 10,
-            max: 30,
-            label: {
-              min: 8,
-              max: 30,
-              drawThreshold: 12,
-              maxVisible: 20
-            }
-          },
+          //scaling: {
+          //  min: 10,
+          //  max: 30,
+          //  label: {
+          //    min: 8,
+          //    max: 30,
+          //    drawThreshold: 12,
+          //    maxVisible: 20
+          //  }
+          //},
           font: {
             size: 12,
             face: 'Tahoma'
-          }
+          },
+          size: 8
         },
         edges: {
-          width: 0.15,
+          width: 0.25,
           color: {inherit: 'from'},
           smooth: {
             type: 'continuous'
           }
         },
-        physics: false,
+        physics: true,
         interaction: {
           tooltipDelay: 200,
-          hideEdgesOnDrag: true
+          hideEdgesOnDrag: false
         }
       };
       var data = {nodes:nodesDataset, edges:edgesDataset}

@@ -359,6 +359,8 @@ module.exports = {
             return {'scores': v};
         }
 
+        var id=req.params.id;
+
         db.apas.find({$where: "this.row == this.column"}).sort({row : 1}, function(err, results) {
             if (err) {
                 console.log('query failed');
@@ -376,7 +378,7 @@ module.exports = {
                         "out": "find_top_k",
                         "query": {},
                         // get this input from user (name -> 5-digit id -> 0-4999 id)
-                        "scope": {orig_author_id: 770, diags: diagonals}
+                        "scope": {orig_author_id: id, diags: diagonals}
                     }, function(err, results) {
                         if (err) {
                             console.log('mapReduce failed');
@@ -445,7 +447,22 @@ module.exports = {
                                         });
                                     });
 
-                                    var data = {nodes: [orig].concat(sims).concat(pps),
+                                    var allNodes=[orig].concat(sims).concat(pps);
+                                    var nodes=[];
+                                    var map={};
+                                    allNodes.forEach(function(e){
+                                        if(e.desc=="similar_author"){
+                                            e.group=1;
+                                        } else {
+                                            e.group=2;
+                                        }
+                                        map[e.id]=e;
+                                    });
+                                    for (var key in map) {
+                                        nodes.push(map[key]);
+                                    }
+
+                                    var data = {nodes: nodes,
                                                 edges: edges};
                                     // find common papers for each pair of authors (3536 -> papers <- simAuthor_i)
 

@@ -7,7 +7,7 @@
   // The Package is past automatically as first parameter
   module.exports = function (Graph, app, auth, database) {
 
-    app.get('/api/graph/result/id', api.getTopKSimAuthors);
+    app.get('/api/graph/result/:id', api.getTopKSimAuthors);
 
     app.get('/api/graph/result', api.getResult);
 
