@@ -233,8 +233,8 @@ var loadIndexData = function (fileName, model, cb) {
             return console.log(err);
         }
         var array = JSON.parse(data);
-        for (var i = 1; i <= array.length; i++) {
-            var id = array[i - 1];
+        for (var i = 0; i < array.length; i++) {
+            var id = array[i];
             var newItem = new model({
                 index: i,
                 id: parseInt(id)
@@ -378,126 +378,129 @@ module.exports = {
                     res.status(404).json({'message':'Author index not found'});
                 }
                 var index=author.index;
+                console.log("index="+index)
+                db.apas.find({$where: "this.row == this.column"}).sort({row : 1}, function(err, results) {
+                    if (err) {
+                        console.log('query failed');
+                    } else {
+                        results.forEach(function(entry) {
+                            diagonals.push(entry.value);
+                        });
 
-            });
+                        db.find_top_k.drop();
 
-        db.apas.find({$where: "this.row == this.column"}).sort({row : 1}, function(err, results) {
-            if (err) {
-                console.log('query failed');
-            } else {
-                results.forEach(function(entry) {
-                    diagonals.push(entry.value);
-                });
-
-                db.find_top_k.drop();
-
-                db.apas.mapReduce(
-                    mapFunc,
-                    reduceFunc,
-                    {
-                        "out": "find_top_k",
-                        "query": {},
-                        // get this input from user (name -> 5-digit id -> 0-4999 id)
-                        "scope": {orig_author_id: id, diags: diagonals}
-                    }, function(err, results) {
-                        if (err) {
-                            console.log('mapReduce failed');
-                            res.status(500).json({'message':'mapReduce failed'});
-                        } else {
-                            db.find_top_k.find().sort({value: -1}).limit(11, function (err, results) {
+                        db.apas.mapReduce(
+                            mapFunc,
+                            reduceFunc,
+                            {
+                                "out": "find_top_k",
+                                "query": {},
+                                // get this input from user (name -> 5-digit id -> 0-4999 id)
+                                "scope": {orig_author_id: index, diags: diagonals}
+                            }, function(err, results) {
                                 if (err) {
-                                    console.log('could not find top k');
-                                    res.status(500).json({'message':'could not find top k'});
-                                } else if(results==null||results.length==0) {
-                                    console.log('results = ' + results);
-                                    res.status(404).json({'message':'No result found'});
+                                    console.log('mapReduce failed');
+                                    res.status(500).json({'message':'mapReduce failed'});
                                 } else {
-                                    var sims = [], pps = [], edges = [];
-
-                                    var containPaper = function(p, pp) {
-                                        pp.forEach(function(paper) {
-                                            if (paper.hasOwnProperty('id')) {
-                                                if (paper.id === p) {
-                                                    return true;
-                                                }
-                                            }
-                                        });
-                                        return false;
-                                    }
-
-                                    var containEdge = function(e, edges) {
-                                        edges.forEach(function(edge) {
-                                            if (edge.hasOwnProperty('from') &&
-                                                edge.hasOwnProperty('to')) {
-                                                if (e.from === edge.from &&
-                                                    e.to === edge.to) {
-                                                    return true;
-                                                }
-                                            }
-                                        });
-                                        return false;
-                                    }
-
-                                    orig = {id: results[0]._id,
-                                            label: getAuthorName(results[0]._id, aId, authors),
-                                            desc: 'original_author'};
-
-                                    for (var i = 1; i < results.length; i++) {
-                                        sims.push({id: results[i]._id,
-                                                   label: getAuthorName(results[i]._id, aId, authors),
-                                                   desc: 'similar_author'});
-                                    }
-
-                                    sims.forEach(function (coauthor) { // coauthor.id is 5-digit
-                                        // why is A2P containing terms
-                                        commonPapers = intersect_safe(findAuthorPapers(orig.id), findAuthorPapers(coauthor.id));
-
-                                        commonPapers.forEach(function(paper) {
-                                            // do a check to make sure no dup paper node
-                                            if (!containPaper(paper, pps)) {
-                                                pps.push({id: paper,
-                                                          label: getItemName(paper, papers),
-                                                          type: 'paper'});
-                                            }
-                                            // add edge from orig author to paper
-                                            e = {from: orig.id, to: paper};
-                                            if (!containEdge(e, edges)) {
-                                                edges.push(e);
-                                            }
-                                            // add edge from co-author to paper
-                                            e = {from: coauthor.id, to: paper};
-                                            if (!containEdge(e, edges)) {
-                                                edges.push(e);
-                                            }
-                                        });
-                                    });
-
-                                    var allNodes=[orig].concat(sims).concat(pps);
-                                    var nodes=[];
-                                    var map={};
-                                    allNodes.forEach(function(e){
-                                        if(e.desc=="similar_author"){
-                                            e.group=1;
+                                    db.find_top_k.find().sort({value: -1}).limit(11, function (err, results) {
+                                        if (err) {
+                                            console.log('could not find top k');
+                                            res.status(500).json({'message':'could not find top k'});
+                                        } else if(results==null||results.length==0) {
+                                            console.log('results = ' + results);
+                                            res.status(404).json({'message':'No result found'});
                                         } else {
-                                            e.group=2;
-                                        }
-                                        map[e.id]=e;
-                                    });
-                                    for (var key in map) {
-                                        nodes.push(map[key]);
-                                    }
+                                            var sims = [], pps = [], edges = [];
 
-                                    var data = {nodes: nodes,
+                                            var containPaper = function(p, pp) {
+                                                pp.forEach(function(paper) {
+                                                    if (paper.hasOwnProperty('id')) {
+                                                        if (paper.id === p) {
+                                                            return true;
+                                                        }
+                                                    }
+                                                });
+                                                return false;
+                                            }
+
+                                            var containEdge = function(e, edges) {
+                                                edges.forEach(function(edge) {
+                                                    if (edge.hasOwnProperty('from') &&
+                                                        edge.hasOwnProperty('to')) {
+                                                        if (e.from === edge.from &&
+                                                            e.to === edge.to) {
+                                                            return true;
+                                                        }
+                                                    }
+                                                });
+                                                return false;
+                                            }
+
+                                            orig = {id: results[0]._id,
+                                                label: getAuthorName(results[0]._id, aId, authors),
+                                                desc: 'original_author'};
+
+                                            for (var i = 1; i < results.length; i++) {
+                                                sims.push({id: results[i]._id,
+                                                    label: getAuthorName(results[i]._id, aId, authors),
+                                                    desc: 'similar_author'});
+                                            }
+
+                                            sims.forEach(function (coauthor) { // coauthor.id is 5-digit
+                                                // why is A2P containing terms
+                                                commonPapers = intersect_safe(findAuthorPapers(orig.id), findAuthorPapers(coauthor.id));
+
+                                                commonPapers.forEach(function(paper) {
+                                                    // do a check to make sure no dup paper node
+                                                    if (!containPaper(paper, pps)) {
+                                                        pps.push({id: paper,
+                                                            label: getItemName(paper, papers),
+                                                            type: 'paper'});
+                                                    }
+                                                    // add edge from orig author to paper
+                                                    e = {from: orig.id, to: paper};
+                                                    if (!containEdge(e, edges)) {
+                                                        edges.push(e);
+                                                    }
+                                                    // add edge from co-author to paper
+                                                    e = {from: coauthor.id, to: paper};
+                                                    if (!containEdge(e, edges)) {
+                                                        edges.push(e);
+                                                    }
+                                                });
+                                            });
+
+                                            var allNodes=[orig].concat(sims).concat(pps);
+                                            var nodes=[];
+                                            var map={};
+                                            allNodes.forEach(function(e){
+                                                if(e.desc=="original_author"){
+                                                    e.group=1;
+                                                } else if(e.desc=="similar_author"){
+                                                    e.group=2;
+                                                } else {
+                                                    e.group=3;
+                                                }
+                                                map[e.id]=e;
+                                            });
+                                            for (var key in map) {
+                                                nodes.push(map[key]);
+                                            }
+
+                                            var data = {nodes: nodes,
                                                 edges: edges};
-                                    // find common papers for each pair of authors (3536 -> papers <- simAuthor_i)
+                                            // find common papers for each pair of authors (3536 -> papers <- simAuthor_i)
 
-                                    res.status(200).json(data);
+                                            res.status(200).json(data);
+                                        }
+                                    });
                                 }
                             });
-                        }
-                    });
-            }
-        });
+                    }
+                });
+            });
+
+
 
     }
 
