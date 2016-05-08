@@ -1,15 +1,7 @@
 <div class="" data-ng-controller="GraphController">
   <div>
-    <form ng-submit="doSearch()">
-      <div class="form-group">
-        <input type="text" class="form-control"
-               ng-model="authorName"
-               ng-required="true"
-               placeholder="Enter author name to search">
-      </div>
-      <button type="submit" class="btn btn-default">Search</button>
-    </form>
-
+      <div author-typeahead ng-model='author'></div>
+      <button type="button" class="btn btn-default" ng-click="doSearch()">Search</button>
   </div>
   <div class="network" id="mynetwork"></div>
 

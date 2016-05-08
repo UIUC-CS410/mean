@@ -8,6 +8,7 @@
   module.exports = function (Graph, app, auth, database) {
 
     app.get('/api/graph/result/:id', api.getTopKSimAuthors);
+    app.get('/api/graph/author', api.getAuthors);
 
     app.get('/api/graph/result', api.getResult);
 

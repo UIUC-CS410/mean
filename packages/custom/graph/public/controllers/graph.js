@@ -71,10 +71,11 @@
   }
 
   function VisController($scope,$http) {
+    $scope.author={};
     $scope.doSearch=function(){
       $http({
         method: 'GET',
-        url: 'api/graph/result/'+$scope.authorName
+        url: 'api/graph/result/'+$scope.author.id
       }).then(function successCallback(response) {
         console.log(response.data)
         redrawAll(response.data.edges, response.data.nodes)

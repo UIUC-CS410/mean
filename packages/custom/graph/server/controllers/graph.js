@@ -325,6 +325,16 @@ module.exports = {
     getResult: function (req, res) {
         res.status(200).json(data);
     },
+    getAuthors:function(req, res) {
+        AuthorModel
+            .find()
+            .exec(function (err, authors) {
+                if (err||authors==null||authors.length==0) {
+                    res.status(404).json({'message':'Authors not found'});
+                }
+                res.status(200).json(authors);
+            });
+    },
 
     getTopKSimAuthors: function (req, res) {
         var mongojs = require('mongojs');
@@ -361,6 +371,16 @@ module.exports = {
 
         var id=req.params.id;
 
+        AuthorIndexModel
+            .findOne({id:id})
+            .exec(function (err, author) {
+                if (err||author==null) {
+                    res.status(404).json({'message':'Author index not found'});
+                }
+                var index=author.index;
+
+            });
+
         db.apas.find({$where: "this.row == this.column"}).sort({row : 1}, function(err, results) {
             if (err) {
                 console.log('query failed');
@@ -382,10 +402,15 @@ module.exports = {
                     }, function(err, results) {
                         if (err) {
                             console.log('mapReduce failed');
+                            res.status(500).json({'message':'mapReduce failed'});
                         } else {
                             db.find_top_k.find().sort({value: -1}).limit(11, function (err, results) {
                                 if (err) {
                                     console.log('could not find top k');
+                                    res.status(500).json({'message':'could not find top k'});
+                                } else if(results==null||results.length==0) {
+                                    console.log('results = ' + results);
+                                    res.status(404).json({'message':'No result found'});
                                 } else {
                                     var sims = [], pps = [], edges = [];
 
